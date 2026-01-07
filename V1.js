@@ -3,11 +3,12 @@ let population; //represent the population of the cells
 let generation = 0; //represent the generation
 let grid; //the current generation grid
 let nextGrid; //the next generation grid
-const SQUARE_SIZE = 10;
+const SQUARE_SIZE = 4;
 let cols, rows;
 let canPress = true; //FLAG to decide if mouse clicking is allowed on grid or not
 let intervalID = null; //needed to enable the start and pause buttons
-
+let gridGraphics;
+let random = false;
 //the eight neighbours of any given cell (horizontal,vertical,diagonal)
 const NEIGHBOURS = [ 
     [-1,-1],[-1,0],[-1,1],
@@ -32,13 +33,38 @@ function setup() {
     rows = height / SQUARE_SIZE;// rows = 400 / SQUARE_SIZE
     grid = make2DArray(cols, rows);
     nextGrid = make2DArray(cols, rows);
+
+    //create static grid lines buffer
+    gridGraphics = createGraphics(width,height);
+    drawGridLines(gridGraphics);
+
     drawGrid();
     population = countPopulation();
     updatePopulationDisplay(); 
 }
+
+function drawGridLines(buffer){
+    buffer.background(0);
+    buffer.stroke(255);
+    buffer.strokeWeight(1);
+
+    //draw vertical lines
+    for(let x = 0; x <= width; x += SQUARE_SIZE){
+        buffer.line(x,0,x,height);
+    }
+
+    //draw horizontal lines
+    for(let y = 0; y <= height; y += SQUARE_SIZE){
+        buffer.line(0,y,width,y);
+    }
+}
 //function to redraw the grid
 function drawGrid(){
-    background(0);
+    //background(0);
+    image(gridGraphics,0,0);
+    stroke(255);
+    fill(255);
+
     for(let i = 0;i< cols;i++){
         for(let j = 0;j< rows;j++){
             stroke(255);
@@ -49,6 +75,11 @@ function drawGrid(){
         }
     }
 }
+function drawResetGrid(){
+    image(gridGraphics,0,0);
+    //reset all the current live cells to size 0
+    LiveCells.clear();
+}
 //mouse clicked function
 function mousePressed(){
     if(canPress){
@@ -57,7 +88,6 @@ function mousePressed(){
         grid[row][col] = grid[row][col] === 0 ? 1 : 0;
         population = countPopulation();
         updatePopulationDisplay();
-
         //redraw grid
         drawGrid();
     }
@@ -72,28 +102,20 @@ function startGame(){
     function draw(){
         drawGrid();
         disableMousePress();//cannot press mouse
-        //let nextGrid = make2DArray(cols, rows);
         // Iterate through the grid and move each cell independently
         for (let i = 0; i < cols; i++) {
             for (let j = 0; j < rows; j++) {
                 let state = grid[i][j]; // State of the current cell
                 let LiveNeighbours = NumLiveNeighbours(grid,i,j);
                 if (state === 1) {
-                    //Conways First Rule of Game of Life
-                    if(LiveNeighbours < 2){
-                        nextGrid[i][j] = 0;//Dies
+                    //Conways Second Rule of Game of Life
+                    if(LiveNeighbours === 2 || LiveNeighbours === 3){
+                        nextGrid[i][j] = 1;//Dies
                         //population--;
                     }
-                    //conways Second Rule of Game of Life
-                    else if(LiveNeighbours <= 3){
-                        nextGrid[i][j] = 1;//Lives
-                        //population++;
-                    
-                    }
-                    //Conways Third Rule of Game of Life
+                    //Conways First and Third Rule of Game of Life
                     else{
-                        nextGrid[i][j] = 0;//dies if more than three live neighbours
-                        //population--;
+                        nextGrid[i][j] = 0;
                     }
                 }else{ //state === 0
                     //Conways Fourth Rule of Game of Life
@@ -106,7 +128,11 @@ function startGame(){
         }
         
         // Update grids for next frame
+        const temp = grid;
         grid = nextGrid;
+        nextGrid = temp;
+
+        nextGrid = make2DArray(cols,rows);//expensive
         population = countPopulation();
         generation++;
         updateGenerationDisplay();
@@ -133,9 +159,11 @@ function resetGame(){
     for(let i = 0;i < cols;i++){
         for(let j = 0; j < rows;j++){
             grid[i][j] = 0;
+            nextGrid[i][j] = 0;
         }
     }
-     drawGrid();
+    //drawGrid();
+    drawResetGrid();
 }
 //function to count the population of the generation
 function countPopulation(){
